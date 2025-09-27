@@ -1,0 +1,204 @@
+import turtle
+import random
+from typing import List, Dict, Optional # Importaciones para el tipado de datos
+
+class VisualizadorMatriz:
+    """
+    Una clase para generar o cargar una matriz de números y visualizarla
+    usando Turtle Graphics (gráficos de tortuga).
+
+    Permite cargar datos desde un archivo o generar una matriz aleatoria.
+    """
+    
+    # ----------------------------------------------------------------------
+    #                          PROPIEDADES DE CLASE
+    # ----------------------------------------------------------------------
+    MAPA_COLORES: Dict[str, str] = {
+        # Mapea los valores (como strings) de la matriz a un color hexadecimal.
+        '0': '#2c3e50', '1': '#3498db', '2': '#2ecc71', '3': '#e74c3c',
+        '4': '#f1c40f', '5': '#9b59b6', 
+        '6': '#e67e22', '7': '#1abc9c',
+        '8': '#d35400', '9': '#bdc3c7'
+    }
+
+    # ----------------------------------------------------------------------
+    #                             CONSTRUCTOR
+    # ----------------------------------------------------------------------
+    def __init__(self, ancho_default: int, alto_default: int, tamaño_pixel: int = 7):
+        """
+        Inicializa el visualizador y el entorno de Turtle Graphics.
+
+        Args:
+            ancho_default (int): Ancho de la matriz a generar por defecto (número de columnas).
+            alto_default (int): Alto de la matriz a generar por defecto (número de filas).
+            tamaño_pixel (int, optional): Tamaño de cada celda (pixel) en la visualización. Por defecto es 7.
+        """
+        self.ancho = ancho_default
+        self.alto = alto_default
+        self.tamaño_pixel = tamaño_pixel
+        self.matriz_datos: List[List[str]] = [] # La matriz que contendrá los datos (strings).
+
+        # Configuración de la librería Turtle
+        self.ventana = turtle.Screen()
+        self.tortuga = turtle.Turtle()
+        self._configurar_lienzo()
+
+    def _configurar_lienzo(self):
+        """
+        Configura los parámetros iniciales de la ventana y la tortuga (velocidad, título, etc.).
+        Es un método privado (inicia con _) ya que solo se llama internamente.
+        """
+        self.ventana.title("🎨 Visualizador de Matriz Corregido 🐢")
+        self.ventana.tracer(0)      # Deshabilita la actualización automática para dibujar más rápido.
+        self.tortuga.speed(0)       # Establece la velocidad máxima.
+        self.tortuga.hideturtle()   # Oculta el puntero de la tortuga.
+        self.tortuga.penup()        # Levanta el lápiz para moverse sin dibujar.
+
+    # ----------------------------------------------------------------------
+    #                      MÉTODOS DE MANEJO DE DATOS
+    # ----------------------------------------------------------------------
+    def generar_matriz_en_memoria(self, max_num: int = 9):
+        """
+        Genera una matriz aleatoria de dimensiones (self.alto x self.ancho)
+        con números aleatorios entre 0 y el límite especificado.
+
+        Args:
+            max_num (int, optional): El número máximo (incluido) para los valores aleatorios. Por defecto es 9.
+        """
+        print("🔧 Generando matriz aleatoria en memoria...")
+        self.matriz_datos = [
+            # Comprensión de listas: genera 'ancho' columnas por cada una de las 'alto' filas
+            [str(random.randint(0, max_num)) for _ in range(self.ancho)]
+            for _ in range(self.alto)
+        ]
+        print(f"✅ Matriz de {self.alto}x{self.ancho} generada.")
+
+    def cargar_matriz_desde_archivo(self, nombre_archivo: str):
+        """
+        Intenta cargar la matriz desde un archivo de texto.
+
+        El archivo debe contener números separados por espacios, con cada línea
+        representando una fila de la matriz.
+
+        Args:
+            nombre_archivo (str): Nombre o ruta del archivo a leer (ej. "matriz.txt").
+        """
+        print(f"🔍 Buscando archivo '{nombre_archivo}'...")
+        try:
+            with open(nombre_archivo, 'r') as f:
+                # Lee cada línea, elimina espacios en blanco al inicio/final (.strip()), 
+                # y divide la línea por espacios (.split()) para obtener la lista de valores.
+                matriz_temp = [linea.strip().split() for linea in f if linea.strip()]
+            
+            if not matriz_temp:
+                print("ℹ️ Archivo encontrado pero está vacío.")
+                return
+
+            # Validación de la matriz cargada
+            primer_fila_len = len(matriz_temp[0])
+            if not all(len(fila) == primer_fila_len for fila in matriz_temp):
+                print("❌ Error: Las filas en el archivo no tienen la misma longitud.")
+                return
+
+            # Si la carga es exitosa y válida, actualiza las propiedades de la clase.
+            self.matriz_datos = matriz_temp
+            self.alto = len(self.matriz_datos)
+            self.ancho = len(self.matriz_datos[0])
+            print(f"✅ Matriz de {self.alto}x{self.ancho} cargada desde '{nombre_archivo}'.")
+
+        except FileNotFoundError:
+            print(f"ℹ️ Archivo '{nombre_archivo}' no encontrado.")
+        except Exception as e:
+            print(f"❌ Ocurrió un error inesperado al leer el archivo: {e}")
+
+    # ----------------------------------------------------------------------
+    #                         MÉTODOS DE DIBUJO
+    # ----------------------------------------------------------------------
+    def _dibujar_pixel(self, x: float, y: float, color: str):
+        """
+        Dibuja un único cuadrado (pixel) en las coordenadas dadas y con el color especificado.
+        """
+        self.tortuga.goto(x, y) # Mueve la tortuga a la esquina superior izquierda del pixel.
+        self.tortuga.pendown()
+        self.tortuga.color(color)
+        self.tortuga.begin_fill()
+        # Dibuja un cuadrado del tamaño de self.tamaño_pixel
+        for _ in range(4):
+            self.tortuga.forward(self.tamaño_pixel)
+            self.tortuga.right(90)
+        self.tortuga.end_fill()
+        self.tortuga.penup()
+
+    def dibujar(self):
+        """
+        Itera sobre la matriz de datos y dibuja cada valor como un "pixel" coloreado
+        utilizando las coordenadas relativas al centro de la pantalla.
+        """
+        if not self.matriz_datos:
+            print("⚠️ No hay datos en la matriz para dibujar. Finalizando.")
+            return
+
+        print("🚀 Empezando a dibujar...")
+        # Calcula el tamaño de la ventana para que se ajuste a la matriz (más un margen).
+        ancho_ventana = self.ancho * self.tamaño_pixel + 50
+        alto_ventana = self.alto * self.tamaño_pixel + 50
+        self.ventana.setup(width=ancho_ventana, height=alto_ventana)
+
+        # Establece las coordenadas de inicio para centrar el dibujo.
+        # El dibujo comienza en la esquina superior izquierda (para dibujar de arriba hacia abajo).
+        start_x = - (self.ancho * self.tamaño_pixel) / 2
+        start_y = (self.alto * self.tamaño_pixel) / 2
+
+        # Bucle principal de dibujo
+        for i, fila in enumerate(self.matriz_datos):
+            for j, valor_str in enumerate(fila):
+                # Busca el color en el mapa, si no lo encuentra usa el gris por defecto ('#7f8c8d').
+                color = self.MAPA_COLORES.get(valor_str, '#7f8c8d')
+                
+                # Calcula la posición del pixel (j*tamaño_pixel para la columna, i*tamaño_pixel para la fila).
+                self._dibujar_pixel(
+                    start_x + j * self.tamaño_pixel, 
+                    start_y - i * self.tamaño_pixel, # Resta i para bajar en el eje Y.
+                    color
+                )
+        
+        self.ventana.update() # Refresca la ventana para mostrar el dibujo completo de una vez.
+        print("✨ ¡Dibujo completado!")
+
+    def iniciar(self):
+        """
+        Mantiene la ventana de Turtle abierta hasta que el usuario hace clic.
+        """
+        if self.matriz_datos:
+            self.ventana.exitonclick()
+
+# ----------------------------------------------------------------------
+#                           SECCIÓN DE EJECUCIÓN
+# ----------------------------------------------------------------------
+if __name__ == "__main__":
+    """
+    Bloque de ejecución principal. Se ejecuta solo cuando el script es corrido 
+    directamente (no importado como módulo).
+    """
+    ANCHO_DEFAULT = 100
+    ALTO_DEFAULT = 100
+    TAMAÑO_PIXEL = 7
+    # Definición del nombre del archivo a buscar (usando la ruta absoluta corregida para ti)
+    NOMBRE_ARCHIVO_OPCIONAL = r"C:\Users\PC FERRET\Documents\Graficacion\p3\matriz.txt"
+
+    # 1. Crea una instancia de la clase
+    visualizador = VisualizadorMatriz(ANCHO_DEFAULT, ALTO_DEFAULT, TAMAÑO_PIXEL)
+    
+    # 2. Intenta cargar la matriz desde el archivo
+    visualizador.cargar_matriz_desde_archivo(NOMBRE_ARCHIVO_OPCIONAL)
+
+    # 3. Verifica si la carga falló; si es así, genera una matriz aleatoria
+    if not visualizador.matriz_datos:
+        print("➡️ No se cargó una matriz válida. Se procederá a generar una aleatoria.")
+        visualizador.generar_matriz_en_memoria()
+
+    # 4. Dibuja la matriz (cargada o generada)
+    visualizador.dibujar()
+    
+    # 5. Mantiene la ventana abierta
+    visualizador.iniciar()
